@@ -1,0 +1,45 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Next.js
+.next/
+out/
+
+# Env files
+.env
+.env.local
+.env.production
+.env.development
+
+# Expo
+.expo/
+dist/
+mobile/android/
+mobile/ios/
+
+# Logs
+*.log
+npm-debug.log*
+
+# Build
+build/
+dist/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# Certs (never commit SSL certs)
+devops/certs/
+
+# EAS / Google services (sensitive)
+mobile/google-services.json
+mobile/GoogleService-Info.plist
+mobile/pc-api-key.json
