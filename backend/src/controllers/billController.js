@@ -9,12 +9,22 @@ const Price = require('../models/Price');
 // ─── Upload and process bill ───────────────────────────────────────
 exports.uploadBill = async (req, res, next) => {
   try {
-    if (!req.file) {
+    let buffer = null;
+    // Prefer multipart file upload
+    if (req.file && req.file.buffer) {
+      buffer = req.file.buffer;
+    } else if (req.body && req.body.imageBase64) {
+      // Accept base64 image in JSON for easier local testing/dev
+      const b64 = req.body.imageBase64.replace(/^data:image\/[a-zA-Z]+;base64,/, '');
+      buffer = Buffer.from(b64, 'base64');
+    }
+
+    if (!buffer) {
       return res.status(400).json({ success: false, message: 'No image uploaded' });
     }
 
-    // 1. Upload to Cloudinary
-    const uploaded = await uploadToCloudinary(req.file.buffer, 'bills', {
+    // 1. Upload to Cloudinary (or local fallback)
+    const uploaded = await uploadToCloudinary(buffer, 'bills', {
       quality: 'auto:low',        // Compress for lightweight storage
       width: 1200,
       crop: 'limit',

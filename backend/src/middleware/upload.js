@@ -1,5 +1,7 @@
 const multer = require('multer');
 const { v2: cloudinary } = require('cloudinary');
+const fs = require('fs');
+const path = require('path');
 
 // ─── Configure Cloudinary ─────────────────────────────────────────
 cloudinary.config({
@@ -27,17 +29,47 @@ const upload = multer({
 });
 
 // ─── Upload to Cloudinary ─────────────────────────────────────────
-const uploadToCloudinary = (buffer, folder, options = {}) => {
-  return new Promise((resolve, reject) => {
-    const stream = cloudinary.uploader.upload_stream(
-      { folder: `smartbasket/${folder}`, ...options },
-      (error, result) => {
-        if (error) reject(error);
-        else resolve(result);
-      }
-    );
-    stream.end(buffer);
-  });
+// Upload to Cloudinary or fall back to local storage when Cloudinary not configured
+const uploadToCloudinary = async (buffer, folder, options = {}) => {
+  const cloudConfigured = !!(
+    process.env.CLOUDINARY_CLOUD_NAME &&
+    process.env.CLOUDINARY_API_KEY &&
+    process.env.CLOUDINARY_API_SECRET &&
+    !String(process.env.CLOUDINARY_API_KEY).startsWith('your-') &&
+    !String(process.env.CLOUDINARY_API_SECRET).startsWith('your-') &&
+    !String(process.env.CLOUDINARY_CLOUD_NAME).startsWith('your-')
+  );
+  if (cloudConfigured) {
+    return new Promise((resolve, reject) => {
+      const stream = cloudinary.uploader.upload_stream(
+        { folder: `smartbasket/${folder}`, ...options },
+        (error, result) => {
+          if (error) reject(error);
+          else resolve(result);
+        }
+      );
+      stream.end(buffer);
+    });
+  }
+
+  // Local fallback: write buffer to ./uploads/<folder>/<timestamp>.<ext>
+  try {
+    const uploadsDir = path.join(__dirname, '..', '..', 'uploads', folder);
+    await fs.promises.mkdir(uploadsDir, { recursive: true });
+    const timestamp = Date.now();
+    const filename = `local_${timestamp}.jpg`;
+    const filePath = path.join(uploadsDir, filename);
+    await fs.promises.writeFile(filePath, buffer);
+
+    // Construct a URL that the server will serve from /uploads
+    const port = process.env.PORT || 5000;
+    return {
+      secure_url: `http://localhost:${port}/uploads/${folder}/${filename}`,
+      public_id: `local_${timestamp}`,
+    };
+  } catch (err) {
+    throw err;
+  }
 };
 
 module.exports = { upload, uploadToCloudinary, cloudinary };

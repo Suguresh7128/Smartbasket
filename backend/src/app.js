@@ -27,6 +27,8 @@ const { checkAlerts } = require('./jobs/alertChecker');
 
 const app = express();
 
+const path = require('path');
+
 // ─── Connect to databases ───────────────────────────────────────
 connectDB();
 connectRedis();
@@ -54,6 +56,9 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
 app.use(passport.initialize());
+
+// Serve uploaded files when running in local/dev (fallback for Cloudinary)
+app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')));
 
 // ─── Health check ───────────────────────────────────────────────
 app.get('/health', (req, res) => {
