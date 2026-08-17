@@ -1,0 +1,29 @@
+name: Deploy Backend to Render
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+
+jobs:
+  deploy-render:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Trigger Render deploy
+        env:
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+        run: |
+          set -e
+          # Find service by name and trigger deploy; requires RENDER_API_KEY secret
+          SERVICE_NAME="smartbasket-api"
+          echo "Looking up Render services..."
+          SERVICES=$(curl -s -H "Authorization: Bearer $RENDER_API_KEY" https://api.render.com/v1/services)
+          SERVICE_ID=$(echo "$SERVICES" | jq -r ".[] | select(.name==\"$SERVICE_NAME\") | .id")
+          if [ -z "$SERVICE_ID" ]; then
+            echo "Service $SERVICE_NAME not found. Create it in Render dashboard or use devops/render.yaml." && exit 1
+          fi
+          echo "Triggering deploy for service $SERVICE_NAME ($SERVICE_ID)"
+          curl -s -X POST -H "Authorization: Bearer $RENDER_API_KEY" https://api.render.com/v1/services/$SERVICE_ID/deploys -d '{}' | jq
